@@ -1,13 +1,23 @@
 const QUESTION_TITLE = document.querySelector('h1');
 const ANSWERS_CONTAINER = document.querySelector('#answers-container');
 
+const answerIndexes = []
 document.querySelector('form').addEventListener('change', event => {
-	console.log(event.target.value);
+	const answerIndex = +event.target.value
+	answerIndexes.push(answerIndex)
+
 	const question = questions[currentQuestionIndex];
-	if (question.answers[+event.target.value] === question.correctAnswer) {
-		alert('You are right!')
+	if (question.answers[answerIndex] === question.correctAnswer) {
+		alert('You are right!');
 	} else {
-		alert('You are wrong!')
+		alert('You are wrong!');
+	}
+
+	currentQuestionIndex++;
+	if (currentQuestionIndex >= questions.length){
+		alert('Out of question');
+	} else {
+		renderQuestion()
 	}
 })
 

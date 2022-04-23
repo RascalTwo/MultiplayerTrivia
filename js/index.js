@@ -62,6 +62,7 @@ document.querySelector('form').addEventListener('change', event => {
 function renderGameOver() {
 	const ul = GAME_OVER.querySelector('ul');
 	ul.innerHTML = '';
+	let correct = 0;
 
 	for (let q = 0; q < questions.length; q++) {
 		const question = questions[q];
@@ -72,9 +73,11 @@ function renderGameOver() {
 					<div class="answers-container">`
 		for (let a = 0; a < question.answers.length; a++) {
 			const checked = answerIndexes[q] === a ? 'checked' : ''
+			const isCorrect = question.answers[a] === question.correctAnswer;
+			if (checked && isCorrect) correct++;
 			html += `
 				<input id="q-${q}-answer-${a}" type="radio" value="${a}" name="q-${q}-answer" ${checked} disabled />
-				<label for="q-${q}-answer-${a}" ${question.answers[a] === question.correctAnswer ? 'class="correct-answer"' : ''}>${question.answers[a]}</label>
+				<label for="q-${q}-answer-${a}" ${isCorrect ? 'class="correct-answer"' : ''}>${question.answers[a]}</label>
 			`
 		}
 		html += `
@@ -84,6 +87,8 @@ function renderGameOver() {
 		`
 		ul.innerHTML += html
 	}
+
+	GAME_OVER.querySelector('#result').textContent = `You got ${(correct / questions.length * 100).toFixed(0)}% correct!`
 }
 
 const questions = [];

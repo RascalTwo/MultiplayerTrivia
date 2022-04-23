@@ -4,7 +4,8 @@
   "description": "Trivia game using the [OpenTDB API](https://opentdb.com/).",
   "main": "index.js",
   "scripts": {
-    "build": "tsc && cp node_modules/peerjs/dist/peerjs.js public/js"
+    "build": "tsc && cp node_modules/peerjs/dist/peerjs.js public/js",
+    "dev": "tsc --watch"
   },
   "repository": {
     "type": "git",

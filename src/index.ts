@@ -14,9 +14,6 @@ const GAME_OVER = document.querySelector('#game-over')!;
 const QUESTION_TITLE = document.querySelector('#game-play h1')!;
 const ANSWERS_CONTAINER = document.querySelector('#game-play .answers-container')!;
 
-let seed = Date.now();
-let getRandom = generateRandomGenerator(seed);
-
 const peer = new Peer(new URLSearchParams(window.location.hash.slice(1)).get('id')!, {
   host: 'localhost',
   port: 9000,
@@ -47,39 +44,57 @@ const PLAYERS: Player[] = [
   },
 ];
 
-/*
 peer.on('open', id => {
-  console.log({ id });
+  PLAYERS.find(player => player.self)!.conn.peer = id;
+
   const joining = new URLSearchParams(window.location.hash.slice(1)).get('joining')!;
   if (!joining) return;
 
-  console.log('Joining', joining)
-  const connection = peer.connect(joining);
-  connection.on('open', () => {
+  console.log('Joining', joining);
+  const conn = peer.connect(joining);
+  let player: Player = {
+    displayName: '',
+    answerIndexes: [],
+    conn,
+  };
+
+  conn.on('open', () => {
     console.log(`Connection to ${joining} opened`);
+    PLAYERS.push(player);
   });
-  connection.on('close', () => {
+  conn.on('close', () => {
     console.log(`Connection to ${joining} closed`);
+    PLAYERS.splice(PLAYERS.indexOf(player), 1);
   });
-  connection.on('error', err => {
-    console.error(err);
-  });
-  connection.on('data', data => {
-    console.error(data);
-  });
+  conn.on('error', console.error);
+  conn.on('data', data => handlePeerMessage(conn.peer, data));
 });
 
 peer.on('connection', conn => {
-  console.log('Connection from', conn.peer)
-})*/
+  console.log('Incoming connection', conn.peer);
+  let player: Player = {
+    displayName: '',
+    answerIndexes: [],
+    conn,
+  };
+
+  conn.on('open', () => {
+    console.log(`Connection to ${conn.peer} opened`);
+    PLAYERS.push(player);
+  });
+  conn.on('close', () => {
+    console.log(`Connection to ${conn.peer} closed`);
+    PLAYERS.splice(PLAYERS.indexOf(player), 1);
+  });
+  conn.on('error', console.error);
+  conn.on('data', data => handlePeerMessage(conn.peer, data));
+});
 
 const questions: Question[] = [];
 let currentQuestionIndex = 0;
 async function advanceGame() {
   if (!questions.length) {
-    const ids = PLAYERS.map(player => player.conn.peer).sort();
-    const id = ids[Math.floor(getRandom() * ids.length)];
-    const player = PLAYERS.find(player => player.conn.peer === id)!;
+    const player = PLAYERS.sort((a, b) => a.conn.peer.localeCompare(b.conn.peer))[0];
     if (!player.self) return;
 
     return fetchQuestions().then(data => {
@@ -97,6 +112,11 @@ async function advanceGame() {
     });
   }
 
+  for (const player of PLAYERS) {
+    player.answerIndexes.push(player.response!);
+    delete player.response;
+  }
+
   currentQuestionIndex++;
   if (currentQuestionIndex >= questions.length) {
     showScreen('game-over');
@@ -107,12 +127,15 @@ async function advanceGame() {
 }
 
 async function handlePeerMessage(id: string, { action, data }: any) {
+  console.log('[HANDLE]', id, action, data);
   switch (action) {
     case 'ready':
       PLAYERS.find(player => player.conn.peer === id)!.response = data;
-      if (PLAYERS.every(player => player.response === 1)) await advanceGame();
+      if (PLAYERS.every(player => player.response === 1)) {
+        await advanceGame();
+        PLAYERS.forEach(player => delete player.response);
+      }
 
-      PLAYERS.forEach(player => delete player.response);
       break;
     case 'setQuestions':
       questions.splice(0, questions.length);
@@ -123,9 +146,11 @@ async function handlePeerMessage(id: string, { action, data }: any) {
     case 'answer':
       const player = PLAYERS.find(player => player.conn.peer === id)!;
       player.response = data;
-      player.answerIndexes.push(data);
 
-      if (PLAYERS.every(player => player.response !== undefined)) await advanceGame();
+      if (PLAYERS.every(player => player.response !== undefined)) {
+        await advanceGame();
+        PLAYERS.forEach(player => delete player.response);
+      }
       break;
     default:
       console.error('Unknown Action', action);
@@ -134,6 +159,7 @@ async function handlePeerMessage(id: string, { action, data }: any) {
 }
 
 function sendMessage(action: string, data: any) {
+  console.log('[SEND]', action, data);
   for (const player of PLAYERS) player.conn.send({ action, data });
 }
 
@@ -144,12 +170,6 @@ document.querySelector('#start-game button')!.addEventListener('click', ({ curre
 
 document.querySelector('form')!.addEventListener('change', event => {
   const answerIndex = +(event.target as HTMLInputElement).value;
-  const question = questions[currentQuestionIndex];
-  if (question.answers[answerIndex] === question.correctAnswer) {
-    alert('You are right!');
-  } else {
-    alert('You are wrong!');
-  }
   sendMessage('answer', answerIndex);
 });
 

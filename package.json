@@ -1,0 +1,23 @@
+{
+  "name": "multiplayer-trivia",
+  "version": "1.0.0",
+  "description": "Trivia game using the [OpenTDB API](https://opentdb.com/).",
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc && cp node_modules/peerjs/dist/peerjs.js public/js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/RascalTwo/MultiplayerTrivia.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/RascalTwo/MultiplayerTrivia/issues"
+  },
+  "homepage": "https://github.com/RascalTwo/MultiplayerTrivia#readme",
+  "dependencies": {
+    "peerjs": "^1.3.2",
+    "typescript": "^4.6.3"
+  }
+}

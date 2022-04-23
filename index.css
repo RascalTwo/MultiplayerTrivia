@@ -1,0 +1,37 @@
+html {
+	text-align: center;
+}
+
+fieldset {
+	width: max-content;
+	margin: auto;
+}
+
+legend {
+	margin: auto;
+}
+
+#answers-container {
+	display: grid;
+	grid-template-columns: auto auto;
+	gap: 1rem;
+}
+
+#answers-container input {
+	display: none;
+}
+
+#answers-container input + label {
+	background-color: lightblue;
+	color: black;
+	padding: 0.5rem;
+	border-radius: 1rem;
+}
+
+
+
+#answers-container input:checked + label {
+	background: darkblue;
+	color: white;
+}
+

@@ -1,58 +1,74 @@
 html {
 	text-align: center;
+	font-size: 62.5%;
+	box-sizing: border-box;
 }
 
-fieldset {
-	width: max-content;
-	margin: auto;
+* {
+	box-sizing: inherit;
+}
+
+.hidden {
+	display: none;
+}
+
+main {
+	font-size: 2rem;
+}
+
+h1 {
+	font-size: 3rem;
+	margin: 2rem auto;
+}
+
+ul {
+	list-style-type: none;
+}
+
+li {
+	margin-top: 2rem;
 }
 
 legend {
 	margin: auto;
 }
 
+fieldset {
+	width: max-content;
+	margin: auto;
+	border: 1px solid black;
+	padding: 1.5rem;
+}
+
 .answers-container {
 	display: grid;
 	grid-template-columns: auto auto;
-	gap: 1rem;
+	gap: 1.5rem;
 }
 
-.answers-container input {
-	display: none;
-}
+	.answers-container input {
+		display: none;
+	}
 
-.answers-container input + label {
-	background-color: lightblue;
-	color: black;
-	padding: 0.5rem;
-	border-radius: 1rem;
-}
+	.answers-container input+label {
+		background-color: lightblue;
+		color: black;
+		padding: 0.5rem;
+		border-radius: 1rem;
+	}
 
-
-
-.answers-container input:checked + label {
-	background: darkblue;
-	color: white;
-}
+	.answers-container input:checked+label {
+		background: darkblue;
+		color: white;
+	}
 
 
-.answers-container input + label.correct-answer {
-	background: green;
-	color: white;
-}
+	.answers-container input+label.correct-answer {
+		background: green;
+		color: white;
+	}
 
-.answers-container input:checked + label.correct-answer {
-	background: rgb(0, 138, 139);
-	color: white;
-}
-
-
-
-ul {
-	list-style-type: none;
-}
-
-
-.hidden {
-	display: none;
-}
+	.answers-container input:checked+label.correct-answer {
+		background: rgb(0, 138, 139);
+		color: white;
+	}

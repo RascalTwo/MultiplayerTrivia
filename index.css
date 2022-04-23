@@ -11,17 +11,17 @@ legend {
 	margin: auto;
 }
 
-#answers-container {
+.answers-container {
 	display: grid;
 	grid-template-columns: auto auto;
 	gap: 1rem;
 }
 
-#answers-container input {
+.answers-container input {
 	display: none;
 }
 
-#answers-container input + label {
+.answers-container input + label {
 	background-color: lightblue;
 	color: black;
 	padding: 0.5rem;
@@ -30,8 +30,29 @@ legend {
 
 
 
-#answers-container input:checked + label {
+.answers-container input:checked + label {
 	background: darkblue;
 	color: white;
 }
 
+
+.answers-container input + label.correct-answer {
+	background: green;
+	color: white;
+}
+
+.answers-container input:checked + label.correct-answer {
+	background: rgb(0, 138, 139);
+	color: white;
+}
+
+
+
+ul {
+	list-style-type: none;
+}
+
+
+.hidden {
+	display: none;
+}

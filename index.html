@@ -11,15 +11,16 @@
 
 	<body>
 		<main>
-			<section>
+			<section id="start-game">
 				<h1>Options</h1>
+				<button>Start</button>
 			</section>
-			<form>
+			<form id="game-play" class="hidden">
 				<h1>QUESTION</h1>
 				<fieldset>
 					<legend>Options</legend>
 
-					<div id="answers-container">
+					<div class="answers-container">
 						<input id="answer-1" type="radio" value="0" name="answer" />
 						<label for="answer-1">Answer #1</label>
 						<input id="answer-2" type="radio" value="1" name="answer" />
@@ -31,6 +32,26 @@
 					</div>
 				</fieldset>
 			</form>
+			<section id="game-over" class="hidden">
+				<h1 id="result"></h1>
+				<ul>
+					<li>
+						<fieldset>
+							<legend>QUESTION</legend>
+							<div class="answers-container">
+								<input id="q-answer-1" type="radio" value="0" name="q-answer" />
+								<label for="q-answer-1">Answer #1</label>
+								<input id="q-answer-2" type="radio" value="1" name="q-answer" />
+								<label for="q-answer-2">Answer #2</label>
+								<input id="q-answer-3" type="radio" value="2" name="q-answer" />
+								<label for="q-answer-3" class="correct-answer">Answer #3</label>
+								<input id="q-answer-4" type="radio" value="3" name="q-answer" />
+								<label for="q-answer-4">Answer #4</label>
+							</div>
+						</fieldset>
+					</li>
+				</ul>
+			</section>
 		</main>
 
 		<script src="js/index.js"></script>

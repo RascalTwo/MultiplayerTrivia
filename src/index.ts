@@ -137,7 +137,8 @@ function sendMessage(action: string, data: any) {
   for (const player of PLAYERS) player.conn.send({ action, data });
 }
 
-document.querySelector('#start-game button')!.addEventListener('click', () => {
+document.querySelector('#start-game button')!.addEventListener('click', ({ currentTarget }) => {
+  (currentTarget as HTMLButtonElement).disabled = true;
   sendMessage('ready', 1);
 });
 

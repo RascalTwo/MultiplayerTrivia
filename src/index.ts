@@ -14,11 +14,7 @@ const GAME_OVER = document.querySelector('#game-over')!;
 const QUESTION_TITLE = document.querySelector('#game-play h1')!;
 const ANSWERS_CONTAINER = document.querySelector('#game-play .answers-container')!;
 
-const peer = new Peer(new URLSearchParams(window.location.hash.slice(1)).get('id')!, {
-  host: 'localhost',
-  port: 9000,
-  path: '/myapp',
-});
+const peer = new Peer(new URLSearchParams(window.location.hash.slice(1)).get('id')!);
 
 const PLAYERS: Player[] = [
   {
@@ -250,5 +246,5 @@ function renderQuestion() {
 }
 
 function fetchQuestions() {
-  return fetch('https://opentdb.com/api.php?amount=3&category=18').then(response => response.json());
+  return fetch('https://opentdb.com/api.php?amount=5&category=18').then(response => response.json());
 }

@@ -94,7 +94,7 @@ const questions: Question[] = [];
 let currentQuestionIndex = 0;
 async function advanceGame() {
   if (!questions.length) {
-    const player = PLAYERS.sort((a, b) => a.conn.peer.localeCompare(b.conn.peer))[0];
+    const player = [...PLAYERS].sort((a, b) => a.conn.peer.localeCompare(b.conn.peer))[0];
     if (!player.self) return;
 
     return fetchQuestions().then(data => {

@@ -1,5 +1,5 @@
 import Peer from 'peerjs';
-import { generateRandomGenerator, shuffle } from './helpers';
+import { shuffle } from './helpers';
 import { Player, Question } from './types';
 
 const MAIN = document.querySelector('main')!;
@@ -137,8 +137,15 @@ async function handlePeerMessage(id: string, { action, data }: any) {
       }
 
       break;
+    case 'restart':
+      PLAYERS.find(player => player.conn.peer === id)!.response = data;
+      if (PLAYERS.every(player => player.response === 1)) {
+        restart();
+        PLAYERS.forEach(player => delete player.response);
+      }
+
+      break;
     case 'setQuestions':
-      questions.splice(0, questions.length);
       questions.push(...data);
       showScreen('game-play');
       renderQuestion();
@@ -158,14 +165,33 @@ async function handlePeerMessage(id: string, { action, data }: any) {
   }
 }
 
+function restart() {
+  for (const player of PLAYERS) {
+    player.answerIndexes.splice(0, player.answerIndexes.length);
+  }
+  questions.splice(0, questions.length);
+  currentQuestionIndex = 0;
+  showScreen('start-game');
+}
+
 function sendMessage(action: string, data: any) {
   console.log('[SEND]', action, data);
   for (const player of PLAYERS) player.conn.send({ action, data });
 }
 
-document.querySelector('#start-game button')!.addEventListener('click', ({ currentTarget }) => {
+const START_BUTTON = document.querySelector('#start-game button')!;
+const RESTART_BUTTON = document.querySelector('#game-over button')!;
+
+START_BUTTON.addEventListener('click', ({ currentTarget }) => {
   (currentTarget as HTMLButtonElement).disabled = true;
+  RESTART_BUTTON.removeAttribute('disabled');
   sendMessage('ready', 1);
+});
+
+RESTART_BUTTON.addEventListener('click', ({ currentTarget }) => {
+  (currentTarget as HTMLButtonElement).disabled = true;
+  START_BUTTON.removeAttribute('disabled');
+  sendMessage('restart', 1);
 });
 
 document.querySelector('form')!.addEventListener('change', event => {

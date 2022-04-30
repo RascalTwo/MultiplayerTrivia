@@ -123,13 +123,17 @@ async function advanceGame() {
     delete player.response;
   }
 
-  currentQuestionIndex++;
-  if (currentQuestionIndex >= questions.length) {
-    showScreen('game-over');
-    renderGameOver();
-  } else {
-    renderQuestion();
-  }
+  renderQuestion(true);
+
+  setTimeout(() => {
+    currentQuestionIndex++;
+    if (currentQuestionIndex >= questions.length) {
+      showScreen('game-over');
+      renderGameOver();
+    } else {
+      renderQuestion();
+    }
+  }, 5000);
 }
 
 async function handlePeerMessage(id: string, { action, data }: any) {
@@ -243,15 +247,18 @@ function renderGameOver() {
   )}% correct!`;
 }
 
-function renderQuestion() {
+function renderQuestion(showCorrectAnswer: boolean = false) {
   const question = questions[currentQuestionIndex];
   QUESTION_TITLE.innerHTML = question.question;
   QUESTION_INFO.textContent = `${currentQuestionIndex + 1} / ${questions.length}`;
   ANSWERS_CONTAINER.innerHTML = '';
+  const myAnswerIndex = PLAYERS.find(player => player.self)?.answerIndexes.slice(-1)[0]!;
   for (let i = 0; i < question.answers.length; i++) {
+    const checked = showCorrectAnswer && myAnswerIndex === i ? 'checked' : '';
+    const isCorrect = showCorrectAnswer && question.answers[i] === question.correctAnswer;
     ANSWERS_CONTAINER.innerHTML += `
-			<input id="answer-${i}" type="radio" value="${i}" name="answer" />
-			<label for="answer-${i}">${question.answers[i]}</label>
+			<input id="answer-${i}" type="radio" value="${i}" name="answer" ${checked} />
+			<label for="answer-${i}" ${isCorrect ? 'class="correct-answer"' : ''}>${question.answers[i]}</label>
 		`;
   }
 }

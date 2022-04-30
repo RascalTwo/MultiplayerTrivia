@@ -13,6 +13,7 @@ function showScreen(showing: string) {
 const GAME_OVER = document.querySelector('#game-over')!;
 const QUESTION_TITLE = document.querySelector('#game-play h1')!;
 const QUESTION_INFO = document.querySelector('#question-info')!;
+const QUESTION_METER = document.querySelector('meter')!;
 const ANSWERS_CONTAINER = document.querySelector('#game-play .answers-container')!;
 
 const peer = new Peer(
@@ -251,6 +252,8 @@ function renderQuestion(showCorrectAnswer: boolean = false) {
   const question = questions[currentQuestionIndex];
   QUESTION_TITLE.innerHTML = question.question;
   QUESTION_INFO.textContent = `${currentQuestionIndex + 1} / ${questions.length}`;
+  QUESTION_METER.value = currentQuestionIndex + 1;
+  QUESTION_METER.max = questions.length;
   ANSWERS_CONTAINER.innerHTML = '';
   const myAnswerIndex = PLAYERS.find(player => player.self)?.answerIndexes.slice(-1)[0]!;
   for (let i = 0; i < question.answers.length; i++) {

@@ -12,6 +12,7 @@ function showScreen(showing: string) {
 
 const GAME_OVER = document.querySelector('#game-over')!;
 const QUESTION_TITLE = document.querySelector('#game-play h1')!;
+const QUESTION_INFO = document.querySelector('#question-info')!;
 const ANSWERS_CONTAINER = document.querySelector('#game-play .answers-container')!;
 
 const peer = new Peer(new URLSearchParams(window.location.hash.slice(1)).get('id')!);
@@ -236,6 +237,7 @@ function renderGameOver() {
 function renderQuestion() {
   const question = questions[currentQuestionIndex];
   QUESTION_TITLE.innerHTML = question.question;
+  QUESTION_INFO.textContent = `${currentQuestionIndex + 1} / ${questions.length}`;
   ANSWERS_CONTAINER.innerHTML = '';
   for (let i = 0; i < question.answers.length; i++) {
     ANSWERS_CONTAINER.innerHTML += `

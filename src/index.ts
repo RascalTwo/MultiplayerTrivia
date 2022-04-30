@@ -15,7 +15,16 @@ const QUESTION_TITLE = document.querySelector('#game-play h1')!;
 const QUESTION_INFO = document.querySelector('#question-info')!;
 const ANSWERS_CONTAINER = document.querySelector('#game-play .answers-container')!;
 
-const peer = new Peer(new URLSearchParams(window.location.hash.slice(1)).get('id')!);
+const peer = new Peer(
+  new URLSearchParams(window.location.hash.slice(1)).get('id')!,
+  ['127.0.0.1', 'localhost'].includes(window.location.hostname)
+    ? {
+        port: 9000,
+        host: 'localhost',
+        path: '/myapp',
+      }
+    : {},
+);
 
 const PLAYERS: Player[] = [
   {

@@ -30,6 +30,7 @@ li {
 }
 
 legend {
+	padding-top: 1rem;
 	margin: auto;
 }
 
@@ -55,6 +56,7 @@ fieldset {
 		color: black;
 		padding: 0.5rem;
 		border-radius: 1rem;
+		max-width: 20vw;
 	}
 
 	.answers-container input:checked+label {

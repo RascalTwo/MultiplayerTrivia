@@ -32,6 +32,28 @@ const PARAMS = (() => {
 
 const getUsernameFromID = (id: string) => id.split(NAMESPACE).slice(1).join(NAMESPACE);
 
+function joinPeer(id: string) {
+  console.log('Joining', id);
+  const conn = (peer as Peer).connect(id);
+  let player: Player = {
+    answerIndexes: [],
+    conn,
+  };
+
+  conn.on('open', () => {
+    console.log(`Connection to ${id} opened`);
+    Players.add(player);
+    Settings.formEnabled = true;
+  });
+  conn.on('close', () => {
+    console.log(`Connection to ${id} closed`);
+    Players.remove(player);
+    Settings.formEnabled = true;
+  });
+  conn.on('error', console.error);
+  conn.on('data', data => handlePeerMessage(conn.peer, data));
+}
+
 let peer: Peer | { id: string };
 if (PARAMS.USERNAME) {
   const pjsPeer = new Peer(
@@ -52,26 +74,7 @@ if (PARAMS.USERNAME) {
     Players.render();
 
     if (!PARAMS.JOINING) return (Settings.formEnabled = true);
-
-    console.log('Joining', PARAMS.JOINING);
-    const conn = pjsPeer.connect(NAMESPACE + PARAMS.JOINING);
-    let player: Player = {
-      answerIndexes: [],
-      conn,
-    };
-
-    conn.on('open', () => {
-      console.log(`Connection to ${PARAMS.JOINING} opened`);
-      Players.add(player);
-      Settings.formEnabled = true;
-    });
-    conn.on('close', () => {
-      console.log(`Connection to ${PARAMS.JOINING} closed`);
-      Players.remove(player);
-      Settings.formEnabled = true;
-    });
-    conn.on('error', console.error);
-    conn.on('data', data => handlePeerMessage(conn.peer, data));
+    joinPeer(NAMESPACE + PARAMS.JOINING);
   });
 
   pjsPeer.on('connection', conn => {
@@ -94,10 +97,14 @@ if (PARAMS.USERNAME) {
       }
 
       sendMessage('updateSettings', Settings.gameData);
+      for (const player of Players.list) {
+        if (player.self || player.conn === conn) continue;
+        conn.send({ action: 'member', data: player.conn.peer });
+      }
     });
     conn.on('close', () => {
       console.log(`Connection to ${conn.peer} closed`);
-      Players.add(player);
+      Players.remove(player);
       Settings.formEnabled = true;
     });
     conn.on('error', console.error);
@@ -338,6 +345,9 @@ async function handlePeerMessage(id: string, { action, data }: any) {
       break;
     case 'updateSettings':
       Settings.data = data;
+      break;
+    case 'member':
+      if (!Players.get(data)) joinPeer(data);
       break;
     case 'answer':
       const player = Players.get(id)!;

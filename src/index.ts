@@ -127,19 +127,24 @@ async function advanceGame() {
 
   renderQuestion(true);
 
-  setProgressTimeout(() => {
-    currentQuestionIndex++;
-    if (currentQuestionIndex >= questions.length) {
-      showScreen('game-over');
-      renderGameOver();
-    } else {
-      renderQuestion();
-    }
-  }, 5000);
+  setProgressTimeout(
+    () => {
+      currentQuestionIndex++;
+      if (currentQuestionIndex >= questions.length) {
+        showScreen('game-over');
+        renderGameOver();
+      } else {
+        renderQuestion();
+      }
+    },
+    5000,
+    'Next question...',
+  );
 }
 
-function setProgressTimeout(callback: Function, ms: number) {
-  QUESTION_PROGRESS.parentElement!.classList.remove('hidden')
+function setProgressTimeout(callback: Function, ms: number, title: string) {
+  QUESTION_PROGRESS.previousElementSibling!.textContent = title;
+  QUESTION_PROGRESS.parentElement!.classList.remove('hidden');
 
   const end = Date.now() + ms;
 
@@ -149,8 +154,8 @@ function setProgressTimeout(callback: Function, ms: number) {
     QUESTION_PROGRESS.value = end - Date.now();
 
     if (Date.now() > end) {
-      QUESTION_PROGRESS.parentElement!.classList.add('hidden')
-      return callback()
+      QUESTION_PROGRESS.parentElement!.classList.add('hidden');
+      return callback();
     }
     requestAnimationFrame(tick);
   }

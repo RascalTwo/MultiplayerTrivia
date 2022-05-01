@@ -25,6 +25,10 @@ export interface Player {
 export interface GameData {
   questionTimer: number
   reviewTimer: number
+  amount: number
+  category: string
+  difficulty: string
+  type: string
 }
 export interface SettingsData extends GameData {
   username: string

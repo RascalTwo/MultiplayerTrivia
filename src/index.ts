@@ -23,10 +23,9 @@ const QUESTION_PROGRESS = document.querySelector('progress')!;
 const ANSWERS_CONTAINER = document.querySelector('#game-play .answers-container')!;
 
 const PARAMS = (() => {
-  const urlParams = new URLSearchParams(window.location.hash.slice(1));
   return {
-    USERNAME: urlParams.get('username') || '',
-    JOINING: urlParams.get('joining'),
+    USERNAME: localStorage.getItem(NAMESPACE + '-username') || '',
+    JOINING: new URLSearchParams(window.location.hash.slice(1)).get('joining'),
   };
 })();
 
@@ -203,12 +202,7 @@ async function advanceGame() {
     () => {
       Players.render();
       currentQuestionIndex++;
-      if (currentQuestionIndex >= questions.length) {
-        showScreen('game-over');
-        renderGameOver();
-      } else {
-        renderQuestion();
-      }
+      renderGame();
     },
     Settings.data.reviewTimer * 1000,
     'Next Question...',
@@ -224,6 +218,10 @@ const Settings = (() => {
       fieldset: form.children[0] as HTMLFieldSetElement,
       questionTimerInput: form.querySelector('#question-timer-input') as HTMLInputElement,
       reviewTimerInput: form.querySelector('#review-timer-input') as HTMLInputElement,
+      amountInput: form.querySelector('#question-count-input') as HTMLInputElement,
+      categoryInput: form.querySelector('#category-input') as HTMLSelectElement,
+      difficultyInput: form.querySelector('#difficulty-input') as HTMLSelectElement,
+      typeInput: form.querySelector('#type-input') as HTMLSelectElement,
       usernameInput: form.querySelector('#username-input') as HTMLInputElement,
       joiningInput: form.querySelector('#joining-input') as HTMLInputElement,
       submitButton: form.querySelector('button')!,
@@ -232,11 +230,19 @@ const Settings = (() => {
       return {
         questionTimer: +this.elements.questionTimerInput.value,
         reviewTimer: +this.elements.reviewTimerInput.value,
+        amount: +this.elements.amountInput.value,
+        category: this.elements.categoryInput.value,
+        difficulty: this.elements.difficultyInput.value,
+        type: this.elements.typeInput.value,
       };
     },
-    set gameData({ questionTimer, reviewTimer }: GameData) {
-      this.elements.questionTimerInput.value = questionTimer.toString();
-      this.elements.reviewTimerInput.value = reviewTimer.toString();
+    set gameData({ questionTimer, reviewTimer, amount, category, difficulty, type }: Partial<GameData>) {
+      if (questionTimer !== undefined) this.elements.questionTimerInput.value = questionTimer.toString();
+      if (reviewTimer !== undefined) this.elements.reviewTimerInput.value = reviewTimer.toString();
+      if (amount !== undefined) this.elements.amountInput.value = amount.toString();
+      if (category !== undefined) this.elements.categoryInput.value = category;
+      if (difficulty !== undefined) this.elements.difficultyInput.value = difficulty;
+      if (type !== undefined) this.elements.typeInput.value = type;
     },
     get data(): SettingsData {
       return {
@@ -257,6 +263,10 @@ const Settings = (() => {
       this.elements.fieldset.disabled = !enabled;
     },
     handleChange() {
+      const params = new URLSearchParams(window.location.hash.slice(1));
+      for (const [key, value] of Object.entries(this.gameData)) params.set(key, value);
+      history.pushState({}, '', window.location.pathname + '#' + params.toString());
+
       sendMessage('updateSettings', this.gameData);
     },
     handleSubmit(event: SubmitEvent) {
@@ -267,9 +277,7 @@ const Settings = (() => {
       sendMessage('ready', 1);
     },
     handleUsernameChange(_: Event) {
-      const params = new URLSearchParams(window.location.hash.slice(1));
-      params.set('username', this.data.username);
-      history.pushState({}, '', window.location.pathname + '#' + params.toString());
+      localStorage.setItem(NAMESPACE + '-username', this.data.username)
       window.location.reload();
     },
     handleJoining(_: Event) {
@@ -287,6 +295,7 @@ const Settings = (() => {
 
   Settings.elements.usernameInput.value = PARAMS.USERNAME;
   Settings.elements.joiningInput.value = PARAMS.JOINING || '';
+  Settings.gameData = Object.fromEntries(new URLSearchParams(window.location.hash.slice(1)).entries());
   return Settings;
 })();
 
@@ -340,8 +349,7 @@ async function handlePeerMessage(id: string, { action, data }: any) {
       break;
     case 'setQuestions':
       questions.push(...data);
-      showScreen('game-play');
-      renderQuestion();
+      renderGame();
       break;
     case 'updateSettings':
       Settings.data = data;
@@ -396,6 +404,16 @@ document.querySelector('#options-form')!.addEventListener('change', event => {
   sendMessage('answer', answerIndex);
 });
 
+function renderGame() {
+  if (currentQuestionIndex >= questions.length) {
+    showScreen('game-over');
+    renderGameOver();
+  } else {
+    showScreen('game-play');
+    renderQuestion();
+  }
+}
+
 function renderGameOver() {
   const self = Players.self;
   const ul = GAME_OVER.querySelector('ul')!;
@@ -429,9 +447,9 @@ function renderGameOver() {
     ul.innerHTML += html;
   }
 
-  GAME_OVER.querySelector('#result')!.textContent = `You got ${((correct / questions.length) * 100).toFixed(
+  GAME_OVER.querySelector('#result')!.textContent = `You got ${questions.length ? ((correct / questions.length) * 100).toFixed(
     0,
-  )}% correct!`;
+  ) : 0}% correct!`;
 }
 
 function renderQuestion(showCorrectAnswer: boolean = false) {
@@ -455,5 +473,11 @@ function renderQuestion(showCorrectAnswer: boolean = false) {
 }
 
 function fetchQuestions() {
-  return fetch('https://opentdb.com/api.php?amount=5&category=18').then(response => response.json());
+  const url = new URL('https://opentdb.com/api.php');
+  const { amount, category, difficulty, type } = Settings.data;
+  url.searchParams.set('amount', amount.toString());
+  url.searchParams.set('category', category);
+  url.searchParams.set('difficulty', difficulty);
+  url.searchParams.set('type', type);
+  return fetch(url.toString()).then(response => response.json());
 }

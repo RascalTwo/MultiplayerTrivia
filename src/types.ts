@@ -16,15 +16,17 @@ export interface MinimalDataConnection {
 }
 
 export interface Player {
-  displayName: string;
+  username: string;
   answerIndexes: number[];
   response?: number;
   conn: MinimalDataConnection;
 	self?: true
 }
 
-
-export interface SettingsData {
+export interface GameData {
   questionTimer: number
   reviewTimer: number
+}
+export interface SettingsData extends GameData {
+  username: string
 }

@@ -1,6 +1,6 @@
 import Peer from 'peerjs';
 import { shuffle } from './helpers';
-import { Player, Question, SettingsData } from './types';
+import { GameData, Player, Question, SettingsData } from './types';
 
 const MAIN = document.querySelector('main')!;
 
@@ -13,6 +13,7 @@ function showScreen(showing: string) {
 const isGameActive = () => document.querySelector('#start-game')!.classList.contains('hidden');
 
 const PEER_WAIT_TIME = 5000;
+const NAMESPACE = 'RascalTwo-MultiplayerTrivia-';
 
 const GAME_OVER = document.querySelector('#game-over')!;
 const QUESTION_TITLE = document.querySelector('#game-play h1')!;
@@ -21,16 +22,94 @@ const QUESTION_METER = document.querySelector('meter')!;
 const QUESTION_PROGRESS = document.querySelector('progress')!;
 const ANSWERS_CONTAINER = document.querySelector('#game-play .answers-container')!;
 
-const peer = new Peer(
-  new URLSearchParams(window.location.hash.slice(1)).get('id')!,
-  ['127.0.0.1', 'localhost'].includes(window.location.hostname)
-    ? {
-        port: 9000,
-        host: 'localhost',
-        path: '/myapp',
+const PARAMS = (() => {
+  const urlParams = new URLSearchParams(window.location.hash.slice(1));
+  return {
+    USERNAME: urlParams.get('username') || '',
+    JOINING: urlParams.get('joining')
+  }
+})();
+
+const getUsernameFromID = (id: string) => id.split(NAMESPACE).slice(1).join(NAMESPACE);
+
+let peer: Peer | { id: string };
+if (PARAMS.USERNAME){
+  const pjsPeer = new Peer(
+    NAMESPACE + PARAMS.USERNAME,
+    ['127.0.0.1', 'localhost'].includes(window.location.hostname)
+      ? {
+          port: 9000,
+          host: 'localhost',
+          path: '/myapp',
+        }
+      : {},
+  );
+
+  pjsPeer.on('error', err => alert(err.message));
+
+  pjsPeer.on('open', id => {
+    PLAYERS.find(player => player.self)!.conn.peer = id;
+
+    if (!PARAMS.JOINING) return (Settings.formEnabled = true);
+
+    console.log('Joining', PARAMS.JOINING);
+    const conn = pjsPeer.connect(NAMESPACE + PARAMS.JOINING);
+    let player: Player = {
+      username: '',
+      answerIndexes: [],
+      conn,
+    };
+
+    conn.on('open', () => {
+      console.log(`Connection to ${PARAMS.JOINING} opened`);
+      PLAYERS.push(player);
+      Settings.formEnabled = true;
+    });
+    conn.on('close', () => {
+      console.log(`Connection to ${PARAMS.JOINING} closed`);
+      PLAYERS.splice(PLAYERS.indexOf(player), 1);
+      Settings.formEnabled = true;
+    });
+    conn.on('error', console.error);
+    conn.on('data', data => handlePeerMessage(conn.peer, data));
+  });
+
+  pjsPeer.on('connection', conn => {
+    Settings.formEnabled = false;
+    console.log('Incoming connection', conn.peer);
+    let player: Player = {
+      username: '',
+      answerIndexes: [],
+      conn,
+    };
+
+    conn.on('open', () => {
+      console.log(`Connection to ${conn.peer} opened`);
+      PLAYERS.push(player);
+      Settings.formEnabled = true;
+
+      if (isGameActive()) {
+        conn.send({ action: 'message', data: 'Is in active game' });
+        setTimeout(() => conn.close(), PEER_WAIT_TIME);
+        return;
       }
-    : {},
-);
+
+      sendMessage('updateSettings', Settings.gameData);
+    });
+    conn.on('close', () => {
+      console.log(`Connection to ${conn.peer} closed`);
+      PLAYERS.splice(PLAYERS.indexOf(player), 1);
+      Settings.formEnabled = true;
+    });
+    conn.on('error', console.error);
+    conn.on('data', data => handlePeerMessage(conn.peer, data));
+  });
+
+  peer = pjsPeer;
+} else {
+  setTimeout(() => Settings.formEnabled = true, 1000);
+  peer = { id: '' };
+}
 
 const PLAYERS: Player[] = [
   {
@@ -50,72 +129,12 @@ const PLAYERS: Player[] = [
         peer: peer.id,
       };
     })(),
-    displayName: '',
+    username: '',
     answerIndexes: [],
     self: true,
   },
 ];
 
-peer.on('error', err => alert(err.message));
-
-peer.on('open', id => {
-  PLAYERS.find(player => player.self)!.conn.peer = id;
-
-  const joining = new URLSearchParams(window.location.hash.slice(1)).get('joining')!;
-  if (!joining) return (Settings.formEnabled = true);
-
-  console.log('Joining', joining);
-  const conn = peer.connect(joining);
-  let player: Player = {
-    displayName: '',
-    answerIndexes: [],
-    conn,
-  };
-
-  conn.on('open', () => {
-    console.log(`Connection to ${joining} opened`);
-    PLAYERS.push(player);
-    Settings.formEnabled = true;
-  });
-  conn.on('close', () => {
-    console.log(`Connection to ${joining} closed`);
-    PLAYERS.splice(PLAYERS.indexOf(player), 1);
-    Settings.formEnabled = true;
-  });
-  conn.on('error', console.error);
-  conn.on('data', data => handlePeerMessage(conn.peer, data));
-});
-
-peer.on('connection', conn => {
-  Settings.formEnabled = false;
-  console.log('Incoming connection', conn.peer);
-  let player: Player = {
-    displayName: '',
-    answerIndexes: [],
-    conn,
-  };
-
-  conn.on('open', () => {
-    console.log(`Connection to ${conn.peer} opened`);
-    PLAYERS.push(player);
-    Settings.formEnabled = true;
-
-    if (isGameActive()) {
-      conn.send({ action: 'message', data: 'Is in active game' });
-      setTimeout(() => conn.close(), PEER_WAIT_TIME);
-      return;
-    }
-
-    sendMessage('updateSettings', Settings.data);
-  });
-  conn.on('close', () => {
-    console.log(`Connection to ${conn.peer} closed`);
-    PLAYERS.splice(PLAYERS.indexOf(player), 1);
-    Settings.formEnabled = true;
-  });
-  conn.on('error', console.error);
-  conn.on('data', data => handlePeerMessage(conn.peer, data));
-});
 
 const questions: Question[] = [];
 let currentQuestionIndex = 0;
@@ -163,23 +182,35 @@ async function advanceGame() {
 
 const Settings = (() => {
   const form = document.querySelector('#settings-form') as HTMLFormElement;
+
   const Settings = {
     elements: {
       form,
       fieldset: form.children[0] as HTMLFieldSetElement,
       questionTimerInput: form.querySelector('#question-timer-input') as HTMLInputElement,
       reviewTimerInput: form.querySelector('#review-timer-input') as HTMLInputElement,
+      usernameInput: form.querySelector('#username-input') as HTMLInputElement,
       submitButton: form.querySelector('button')!,
     },
-    get data(): SettingsData {
+    get gameData(): GameData{
       return {
         questionTimer: +this.elements.questionTimerInput.value,
         reviewTimer: +this.elements.reviewTimerInput.value,
-      };
+      }
     },
-    set data({ questionTimer, reviewTimer }: SettingsData) {
+    set gameData({ questionTimer, reviewTimer }: GameData) {
       this.elements.questionTimerInput.value = questionTimer.toString();
       this.elements.reviewTimerInput.value = reviewTimer.toString();
+    },
+    get data(): SettingsData {
+      return {,
+        ...this.gameData,
+        username: this.elements.usernameInput.value.trim(),
+      };
+    },
+    set data({ username, ...gameData }: SettingsData) {
+      this.gameData = gameData
+      if (username !== undefined) this.elements.usernameInput.value = username;
     },
     get formEnabled() {
       return !this.elements.fieldset.disabled;
@@ -188,7 +219,7 @@ const Settings = (() => {
       this.elements.fieldset.disabled = !enabled;
     },
     handleChange() {
-      sendMessage('updateSettings', this.data);
+      sendMessage('updateSettings', this.gameData);
     },
     handleSubmit(event: SubmitEvent) {
       event.preventDefault();
@@ -197,9 +228,19 @@ const Settings = (() => {
       RESTART_BUTTON.removeAttribute('disabled');
       sendMessage('ready', 1);
     },
+    handleUsernameChange(_: Event){
+      const params = new URLSearchParams(window.location.hash.slice(1));
+      params.set('username', this.data.username)
+      history.pushState({}, '', window.location.pathname + '#' + params.toString())
+      window.location.reload();
+    }
   };
+
   Settings.elements.form.addEventListener('change', Settings.handleChange.bind(Settings));
   Settings.elements.form.addEventListener('submit', Settings.handleSubmit.bind(Settings));
+  Settings.elements.usernameInput.addEventListener('change', Settings.handleUsernameChange.bind(Settings));
+
+  Settings.elements.usernameInput.value = PARAMS.USERNAME;
   return Settings;
 })();
 
@@ -266,7 +307,7 @@ async function handlePeerMessage(id: string, { action, data }: any) {
       }
       break;
     case 'message':
-      alert(`${id} said: ${data}`);
+      alert(`${getUsernameFromID(id)} said: ${data}`);
       break;
     default:
       console.error('Unknown Action', action);

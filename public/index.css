@@ -100,3 +100,11 @@ fieldset {
 		max-width: none;
 	}
 }
+
+#player-list-wrapper {
+	font-size: 2rem;
+	text-align: left;
+	position: absolute;
+	right: 1rem;
+	bottom: 1rem;
+}

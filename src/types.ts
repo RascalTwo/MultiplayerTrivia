@@ -16,7 +16,6 @@ export interface MinimalDataConnection {
 }
 
 export interface Player {
-  username: string;
   answerIndexes: number[];
   response?: number;
   conn: MinimalDataConnection;

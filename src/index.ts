@@ -26,14 +26,14 @@ const PARAMS = (() => {
   const urlParams = new URLSearchParams(window.location.hash.slice(1));
   return {
     USERNAME: urlParams.get('username') || '',
-    JOINING: urlParams.get('joining')
-  }
+    JOINING: urlParams.get('joining'),
+  };
 })();
 
 const getUsernameFromID = (id: string) => id.split(NAMESPACE).slice(1).join(NAMESPACE);
 
 let peer: Peer | { id: string };
-if (PARAMS.USERNAME){
+if (PARAMS.USERNAME) {
   const pjsPeer = new Peer(
     NAMESPACE + PARAMS.USERNAME,
     ['127.0.0.1', 'localhost'].includes(window.location.hostname)
@@ -48,26 +48,26 @@ if (PARAMS.USERNAME){
   pjsPeer.on('error', err => alert(err.message));
 
   pjsPeer.on('open', id => {
-    PLAYERS.find(player => player.self)!.conn.peer = id;
+    Players.self.conn.peer = id;
+    Players.render();
 
     if (!PARAMS.JOINING) return (Settings.formEnabled = true);
 
     console.log('Joining', PARAMS.JOINING);
     const conn = pjsPeer.connect(NAMESPACE + PARAMS.JOINING);
     let player: Player = {
-      username: '',
       answerIndexes: [],
       conn,
     };
 
     conn.on('open', () => {
       console.log(`Connection to ${PARAMS.JOINING} opened`);
-      PLAYERS.push(player);
+      Players.add(player);
       Settings.formEnabled = true;
     });
     conn.on('close', () => {
       console.log(`Connection to ${PARAMS.JOINING} closed`);
-      PLAYERS.splice(PLAYERS.indexOf(player), 1);
+      Players.remove(player);
       Settings.formEnabled = true;
     });
     conn.on('error', console.error);
@@ -78,14 +78,13 @@ if (PARAMS.USERNAME){
     Settings.formEnabled = false;
     console.log('Incoming connection', conn.peer);
     let player: Player = {
-      username: '',
       answerIndexes: [],
       conn,
     };
 
     conn.on('open', () => {
       console.log(`Connection to ${conn.peer} opened`);
-      PLAYERS.push(player);
+      Players.add(player);
       Settings.formEnabled = true;
 
       if (isGameActive()) {
@@ -98,7 +97,7 @@ if (PARAMS.USERNAME){
     });
     conn.on('close', () => {
       console.log(`Connection to ${conn.peer} closed`);
-      PLAYERS.splice(PLAYERS.indexOf(player), 1);
+      Players.add(player);
       Settings.formEnabled = true;
     });
     conn.on('error', console.error);
@@ -107,40 +106,67 @@ if (PARAMS.USERNAME){
 
   peer = pjsPeer;
 } else {
-  setTimeout(() => Settings.formEnabled = true, 1000);
+  setTimeout(() => (Settings.formEnabled = true), 1000);
   peer = { id: '' };
 }
 
-const PLAYERS: Player[] = [
-  {
-    conn: (() => {
-      const handlers: Record<string, Function[]> = {};
-      return {
-        send(data: any) {
-          handlePeerMessage(peer.id, data);
-        },
-        close() {
-          (handlers.close || []).forEach(func => func());
-        },
-        on(event: string, func: Function) {
-          if (!(event in handlers)) handlers[event] = [];
-          handlers[event].push(func);
-        },
-        peer: peer.id,
-      };
-    })(),
-    username: '',
-    answerIndexes: [],
-    self: true,
+const Players = {
+  listElement: document.querySelector('#player-list-wrapper ul')!,
+  list: [
+    {
+      conn: (() => {
+        const handlers: Record<string, Function[]> = {};
+        return {
+          send(data: any) {
+            handlePeerMessage(peer.id, data);
+          },
+          close() {
+            (handlers.close || []).forEach(func => func());
+          },
+          on(event: string, func: Function) {
+            if (!(event in handlers)) handlers[event] = [];
+            handlers[event].push(func);
+          },
+          peer: peer.id,
+        };
+      })(),
+      answerIndexes: [],
+      self: true,
+    },
+  ] as Player[],
+  add(player: Player) {
+    this.list.push(player);
+    this.render();
   },
-];
+  remove(player: Player) {
+    this.list.splice(this.list.indexOf(player), 1);
+    this.render();
+  },
+  get(id: string): Player | undefined {
+    return this.list.find(player => player.conn.peer === id);
+  },
+  get self() {
+    return this.list.find(player => player.self)!;
+  },
+  render() {
+    this.listElement.innerHTML = '';
+    this.listElement.appendChild(
+      this.list.reduce((fragment, player) => {
+        const li = document.createElement('li');
+        li.textContent = `${getUsernameFromID(player.conn.peer)} ${player.response !== undefined ? '' : '...'}`;
 
+        fragment.appendChild(li);
+        return fragment;
+      }, document.createDocumentFragment()),
+    );
+  },
+};
 
 const questions: Question[] = [];
 let currentQuestionIndex = 0;
 async function advanceGame() {
   if (!questions.length) {
-    const player = [...PLAYERS].sort((a, b) => a.conn.peer.localeCompare(b.conn.peer))[0];
+    const player = [...Players.list].sort((a, b) => a.conn.peer.localeCompare(b.conn.peer))[0];
     if (!player.self) return;
 
     return fetchQuestions().then(data => {
@@ -158,7 +184,8 @@ async function advanceGame() {
     });
   }
 
-  for (const player of PLAYERS) {
+  Players.render();
+  for (const player of Players.list) {
     player.answerIndexes.push(player.response!);
     delete player.response;
   }
@@ -167,6 +194,7 @@ async function advanceGame() {
 
   ProgressTimer.set(
     () => {
+      Players.render();
       currentQuestionIndex++;
       if (currentQuestionIndex >= questions.length) {
         showScreen('game-over');
@@ -192,24 +220,24 @@ const Settings = (() => {
       usernameInput: form.querySelector('#username-input') as HTMLInputElement,
       submitButton: form.querySelector('button')!,
     },
-    get gameData(): GameData{
+    get gameData(): GameData {
       return {
         questionTimer: +this.elements.questionTimerInput.value,
         reviewTimer: +this.elements.reviewTimerInput.value,
-      }
+      };
     },
     set gameData({ questionTimer, reviewTimer }: GameData) {
       this.elements.questionTimerInput.value = questionTimer.toString();
       this.elements.reviewTimerInput.value = reviewTimer.toString();
     },
     get data(): SettingsData {
-      return {,
+      return {
         ...this.gameData,
         username: this.elements.usernameInput.value.trim(),
       };
     },
     set data({ username, ...gameData }: SettingsData) {
-      this.gameData = gameData
+      this.gameData = gameData;
       if (username !== undefined) this.elements.usernameInput.value = username;
     },
     get formEnabled() {
@@ -228,12 +256,12 @@ const Settings = (() => {
       RESTART_BUTTON.removeAttribute('disabled');
       sendMessage('ready', 1);
     },
-    handleUsernameChange(_: Event){
+    handleUsernameChange(_: Event) {
       const params = new URLSearchParams(window.location.hash.slice(1));
-      params.set('username', this.data.username)
-      history.pushState({}, '', window.location.pathname + '#' + params.toString())
+      params.set('username', this.data.username);
+      history.pushState({}, '', window.location.pathname + '#' + params.toString());
       window.location.reload();
-    }
+    },
   };
 
   Settings.elements.form.addEventListener('change', Settings.handleChange.bind(Settings));
@@ -274,18 +302,21 @@ async function handlePeerMessage(id: string, { action, data }: any) {
   console.log('[HANDLE]', id, action, data);
   switch (action) {
     case 'ready':
-      PLAYERS.find(player => player.conn.peer === id)!.response = data;
-      if (PLAYERS.every(player => player.response === 1)) {
+      Players.get(id)!.response = data;
+      Players.render();
+      if (Players.list.every(player => player.response === 1)) {
         await advanceGame();
-        PLAYERS.forEach(player => delete player.response);
+        Players.list.forEach(player => delete player.response);
       }
+      Players.render();
 
       break;
     case 'restart':
-      PLAYERS.find(player => player.conn.peer === id)!.response = data;
-      if (PLAYERS.every(player => player.response === 1)) {
+      Players.get(id)!.response = data;
+      Players.render();
+      if (Players.list.every(player => player.response === 1)) {
         restart();
-        PLAYERS.forEach(player => delete player.response);
+        Players.list.forEach(player => delete player.response);
       }
 
       break;
@@ -298,13 +329,15 @@ async function handlePeerMessage(id: string, { action, data }: any) {
       Settings.data = data;
       break;
     case 'answer':
-      const player = PLAYERS.find(player => player.conn.peer === id)!;
+      const player = Players.get(id)!;
       player.response = data;
+      Players.render();
 
-      if (PLAYERS.every(player => player.response !== undefined)) {
+      if (Players.list.every(player => player.response !== undefined)) {
         await advanceGame();
-        PLAYERS.forEach(player => delete player.response);
+        Players.list.forEach(player => delete player.response);
       }
+
       break;
     case 'message':
       alert(`${getUsernameFromID(id)} said: ${data}`);
@@ -316,7 +349,7 @@ async function handlePeerMessage(id: string, { action, data }: any) {
 }
 
 function restart() {
-  for (const player of PLAYERS) {
+  for (const player of Players.list) {
     player.answerIndexes.splice(0, player.answerIndexes.length);
   }
   questions.splice(0, questions.length);
@@ -326,7 +359,7 @@ function restart() {
 
 function sendMessage(action: string, data: any) {
   console.log('[SEND]', action, data);
-  for (const player of PLAYERS) player.conn.send({ action, data });
+  for (const player of Players.list) player.conn.send({ action, data });
 }
 
 const RESTART_BUTTON = document.querySelector('#game-over button')!;
@@ -343,7 +376,7 @@ document.querySelector('#options-form')!.addEventListener('change', event => {
 });
 
 function renderGameOver() {
-  const self = PLAYERS.find(player => player.self)!;
+  const self = Players.self;
   const ul = GAME_OVER.querySelector('ul')!;
   ul.innerHTML = '';
   let correct = 0;
@@ -359,7 +392,7 @@ function renderGameOver() {
       const checked = self.answerIndexes[q] === a ? 'checked' : '';
       const isCorrect = question.answers[a] === question.correctAnswer;
       if (checked && isCorrect) correct++;
-      const selectedCount = PLAYERS.filter(player => player.answerIndexes[q] === a).length;
+      const selectedCount = Players.list.filter(player => player.answerIndexes[q] === a).length;
       html += `
 				<input id="q-${q}-answer-${a}" type="radio" value="${a}" name="q-${q}-answer" ${checked} disabled />
 				<label for="q-${q}-answer-${a}" ${isCorrect ? 'class="correct-answer"' : ''}>${question.answers[a]}${
@@ -387,7 +420,7 @@ function renderQuestion(showCorrectAnswer: boolean = false) {
   QUESTION_METER.value = currentQuestionIndex + 1;
   QUESTION_METER.max = questions.length;
   ANSWERS_CONTAINER.innerHTML = '';
-  const myAnswerIndex = PLAYERS.find(player => player.self)?.answerIndexes.slice(-1)[0]!;
+  const myAnswerIndex = Players.self.answerIndexes.slice(-1)[0]!;
   for (let i = 0; i < question.answers.length; i++) {
     const checked = showCorrectAnswer && myAnswerIndex === i ? 'checked' : '';
     const isCorrect = showCorrectAnswer && question.answers[i] === question.correctAnswer;

@@ -127,7 +127,7 @@ async function advanceGame() {
 
   renderQuestion(true);
 
-  setProgressTimeout(
+  ProgressTimer.set(
     () => {
       currentQuestionIndex++;
       if (currentQuestionIndex >= questions.length) {
@@ -138,29 +138,35 @@ async function advanceGame() {
       }
     },
     5000,
-    'Next question...',
+    'Next Question...',
   );
 }
 
-function setProgressTimeout(callback: Function, ms: number, title: string) {
-  QUESTION_PROGRESS.previousElementSibling!.textContent = title;
-  QUESTION_PROGRESS.parentElement!.classList.remove('hidden');
+const ProgressTimer = {
+  callback: (() => undefined) as Function,
+  end: 0,
+  tick(): any {
+    QUESTION_PROGRESS.value = this.end - Date.now();
 
-  const end = Date.now() + ms;
+    if (Date.now() < this.end) return requestAnimationFrame(this.tick.bind(this));
 
-  QUESTION_PROGRESS.value = 0;
-  QUESTION_PROGRESS.max = ms;
-  function tick() {
-    QUESTION_PROGRESS.value = end - Date.now();
+    QUESTION_PROGRESS.parentElement!.classList.add('hidden');
+    return this.callback();
+  },
+  set(callback: Function, ms: number, title: string) {
+    this.callback = callback;
+    this.end = Date.now() + ms;
+    QUESTION_PROGRESS.previousElementSibling!.textContent = title;
+    QUESTION_PROGRESS.parentElement!.classList.remove('hidden');
+    QUESTION_PROGRESS.max = ms;
 
-    if (Date.now() > end) {
-      QUESTION_PROGRESS.parentElement!.classList.add('hidden');
-      return callback();
-    }
-    requestAnimationFrame(tick);
-  }
-  tick();
-}
+    this.tick();
+  },
+  stop() {
+    this.callback = () => undefined;
+    this.end = 0;
+  },
+};
 
 async function handlePeerMessage(id: string, { action, data }: any) {
   console.log('[HANDLE]', id, action, data);
@@ -232,6 +238,7 @@ RESTART_BUTTON.addEventListener('click', ({ currentTarget }) => {
 
 document.querySelector('form')!.addEventListener('change', event => {
   const answerIndex = +(event.target as HTMLInputElement).value;
+  ProgressTimer.callback = () => undefined;
   sendMessage('answer', answerIndex);
 });
 
@@ -289,6 +296,8 @@ function renderQuestion(showCorrectAnswer: boolean = false) {
 			<label for="answer-${i}" ${isCorrect ? 'class="correct-answer"' : ''}>${question.answers[i]}</label>
 		`;
   }
+
+  ProgressTimer.set(() => sendMessage('answer', -1), 60000, 'Time Remaining...');
 }
 
 function fetchQuestions() {

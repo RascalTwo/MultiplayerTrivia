@@ -41,7 +41,7 @@ fieldset {
 	padding: 1.5rem;
 }
 
-.answers-container {
+.two-column-grid, .answers-container {
 	display: grid;
 	grid-template-columns: auto auto;
 	gap: 1.5rem;

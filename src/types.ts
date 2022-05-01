@@ -22,3 +22,9 @@ export interface Player {
   conn: MinimalDataConnection;
 	self?: true
 }
+
+
+export interface SettingsData {
+  questionTimer: number
+  reviewTimer: number
+}

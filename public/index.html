@@ -14,7 +14,17 @@
 		<main>
 			<section id="start-game">
 				<h1>Options</h1>
-				<button>Ready</button>
+				<form id="settings-form">
+					<fieldset class="two-column-grid">
+						<legend>Timers</legend>
+						<label for="question-timer-input">Question</label>
+						<input type="number" min="0" id="question-timer-input" value="60" placeholder="Time for Questions" />
+
+						<label for="review-timer-input">Review</label>
+						<input type="number" min="0" id="review-timer-input" value="5" placeholder="Time for Reviews" />
+					</fieldset>
+					<button>Ready</button>
+				</form>
 			</section>
 			<form id="game-play" class="hidden">
 				<h1>QUESTION</h1>
@@ -28,7 +38,7 @@
 						<legend>Remaining Time</legend>
 						<progress value="0" min="0" max="100"></progress>
 					</fieldset>
-					<fieldset>
+					<fieldset id="options-form">
 						<legend>Options</legend>
 
 						<div class="answers-container">

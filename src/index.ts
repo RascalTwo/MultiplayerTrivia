@@ -1,6 +1,6 @@
 import Peer from 'peerjs';
 import { shuffle } from './helpers';
-import { Player, Question } from './types';
+import { Player, Question, SettingsData } from './types';
 
 const MAIN = document.querySelector('main')!;
 
@@ -89,6 +89,7 @@ peer.on('connection', conn => {
   conn.on('open', () => {
     console.log(`Connection to ${conn.peer} opened`);
     PLAYERS.push(player);
+    sendMessage('updateSettings', Settings.data);
   });
   conn.on('close', () => {
     console.log(`Connection to ${conn.peer} closed`);
@@ -137,10 +138,35 @@ async function advanceGame() {
         renderQuestion();
       }
     },
-    5000,
+    Settings.data.reviewTimer * 1000,
     'Next Question...',
   );
 }
+
+const Settings = (() => {
+  const Settings = {
+    elements: {
+      form: document.querySelector('#settings-form') as HTMLFormElement,
+      questionTimerInput: document.querySelector('#question-timer-input') as HTMLInputElement,
+      reviewTimerInput: document.querySelector('#review-timer-input') as HTMLInputElement,
+    },
+    get data(): SettingsData {
+      return {
+        questionTimer: +this.elements.questionTimerInput.value,
+        reviewTimer: +this.elements.reviewTimerInput.value,
+      };
+    },
+    set data({ questionTimer, reviewTimer }: SettingsData) {
+      this.elements.questionTimerInput.value = questionTimer.toString();
+      this.elements.reviewTimerInput.value = reviewTimer.toString();
+    },
+    handleChange() {
+      sendMessage('updateSettings', this.data);
+    },
+  };
+  Settings.elements.form.addEventListener('change', Settings.handleChange.bind(Settings));
+  return Settings;
+})();
 
 const ProgressTimer = {
   callback: (() => undefined) as Function,
@@ -192,6 +218,9 @@ async function handlePeerMessage(id: string, { action, data }: any) {
       showScreen('game-play');
       renderQuestion();
       break;
+    case 'updateSettings':
+      Settings.data = data;
+      break;
     case 'answer':
       const player = PLAYERS.find(player => player.conn.peer === id)!;
       player.response = data;
@@ -236,7 +265,7 @@ RESTART_BUTTON.addEventListener('click', ({ currentTarget }) => {
   sendMessage('restart', 1);
 });
 
-document.querySelector('form')!.addEventListener('change', event => {
+document.querySelector('#options-form')!.addEventListener('change', event => {
   const answerIndex = +(event.target as HTMLInputElement).value;
   ProgressTimer.callback = () => undefined;
   sendMessage('answer', answerIndex);
@@ -297,7 +326,7 @@ function renderQuestion(showCorrectAnswer: boolean = false) {
 		`;
   }
 
-  ProgressTimer.set(() => sendMessage('answer', -1), 60000, 'Time Remaining...');
+  ProgressTimer.set(() => sendMessage('answer', -1), Settings.data.questionTimer * 1000, 'Time Remaining...');
 }
 
 function fetchQuestions() {

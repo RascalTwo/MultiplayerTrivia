@@ -14,6 +14,7 @@ const GAME_OVER = document.querySelector('#game-over')!;
 const QUESTION_TITLE = document.querySelector('#game-play h1')!;
 const QUESTION_INFO = document.querySelector('#question-info')!;
 const QUESTION_METER = document.querySelector('meter')!;
+const QUESTION_PROGRESS = document.querySelector('progress')!;
 const ANSWERS_CONTAINER = document.querySelector('#game-play .answers-container')!;
 
 const peer = new Peer(
@@ -126,7 +127,7 @@ async function advanceGame() {
 
   renderQuestion(true);
 
-  setTimeout(() => {
+  setProgressTimeout(() => {
     currentQuestionIndex++;
     if (currentQuestionIndex >= questions.length) {
       showScreen('game-over');
@@ -135,6 +136,25 @@ async function advanceGame() {
       renderQuestion();
     }
   }, 5000);
+}
+
+function setProgressTimeout(callback: Function, ms: number) {
+  QUESTION_PROGRESS.parentElement!.classList.remove('hidden')
+
+  const end = Date.now() + ms;
+
+  QUESTION_PROGRESS.value = 0;
+  QUESTION_PROGRESS.max = ms;
+  function tick() {
+    QUESTION_PROGRESS.value = end - Date.now();
+
+    if (Date.now() > end) {
+      QUESTION_PROGRESS.parentElement!.classList.add('hidden')
+      return callback()
+    }
+    requestAnimationFrame(tick);
+  }
+  tick();
 }
 
 async function handlePeerMessage(id: string, { action, data }: any) {

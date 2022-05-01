@@ -72,3 +72,29 @@ fieldset {
 		background: rgb(0, 138, 139);
 		color: white;
 	}
+
+.question-field-wrappers {
+	position: relative;
+}
+
+@media (min-width: 700px) {
+	.question-info {
+		position: absolute;
+		top: 50%;
+		transform: translateY(-50%);
+		left: 1rem;
+	}
+
+	.timer {
+		position: absolute;
+		top: 50%;
+		transform: translateY(-50%);
+		right: 1rem;
+	}
+}
+
+@media (max-width: 700px) {
+	.answers-container input+label {
+		max-width: none;
+	}
+}

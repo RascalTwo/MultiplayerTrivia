@@ -218,6 +218,7 @@ const Settings = (() => {
       questionTimerInput: form.querySelector('#question-timer-input') as HTMLInputElement,
       reviewTimerInput: form.querySelector('#review-timer-input') as HTMLInputElement,
       usernameInput: form.querySelector('#username-input') as HTMLInputElement,
+      joiningInput: form.querySelector('#joining-input') as HTMLInputElement,
       submitButton: form.querySelector('button')!,
     },
     get gameData(): GameData {
@@ -234,11 +235,13 @@ const Settings = (() => {
       return {
         ...this.gameData,
         username: this.elements.usernameInput.value.trim(),
+        joining: this.elements.joiningInput.value.trim(),
       };
     },
-    set data({ username, ...gameData }: SettingsData) {
+    set data({ username, joining, ...gameData }: SettingsData) {
       this.gameData = gameData;
       if (username !== undefined) this.elements.usernameInput.value = username;
+      if (joining !== undefined) this.elements.joiningInput.value = joining;
     },
     get formEnabled() {
       return !this.elements.fieldset.disabled;
@@ -262,13 +265,21 @@ const Settings = (() => {
       history.pushState({}, '', window.location.pathname + '#' + params.toString());
       window.location.reload();
     },
+    handleJoining(_: Event) {
+      const params = new URLSearchParams(window.location.hash.slice(1));
+      params.set('joining', this.data.joining);
+      history.pushState({}, '', window.location.pathname + '#' + params.toString());
+      window.location.reload();
+    },
   };
 
   Settings.elements.form.addEventListener('change', Settings.handleChange.bind(Settings));
   Settings.elements.form.addEventListener('submit', Settings.handleSubmit.bind(Settings));
   Settings.elements.usernameInput.addEventListener('change', Settings.handleUsernameChange.bind(Settings));
+  Settings.elements.joiningInput.addEventListener('change', Settings.handleJoining.bind(Settings));
 
   Settings.elements.usernameInput.value = PARAMS.USERNAME;
+  Settings.elements.joiningInput.value = PARAMS.JOINING || '';
   return Settings;
 })();
 

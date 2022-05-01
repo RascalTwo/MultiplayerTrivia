@@ -28,4 +28,5 @@ export interface GameData {
 }
 export interface SettingsData extends GameData {
   username: string
+  joining: string
 }

@@ -14,23 +14,23 @@
 		<main>
 			<section id="start-game">
 				<form id="settings-form">
-					<fieldset disabled>
+					<fieldset class="two-column-grid">
 						<legend>New Game</legend>
-						<fieldset class="two-column-grid">
-							<legend>Timers</legend>
-							<label for="question-timer-input">Question</label>
-							<input type="number" min="1" id="question-timer-input" value="60" placeholder="Time for Questions" />
+						<label for="question-timer-input">Question</label>
+						<input type="number" min="1" id="question-timer-input" value="60" placeholder="Time for Questions" />
 
-							<label for="review-timer-input">Review</label>
-							<input type="number" min="0" id="review-timer-input" value="5" placeholder="Time for Reviews" />
-						</fieldset>
-						<fieldset>
-							<legend>Multiplayer</legend>
-
-							<label for="username-input">Username</label>
-							<input id="username-input" placeholder="Username" />
-						</fieldset>
+						<label for="review-timer-input">Review</label>
+						<input type="number" min="0" id="review-timer-input" value="5" placeholder="Time for Reviews" />
 						<button>Ready</button>
+					</fieldset>
+					<fieldset class="two-column-grid">
+						<legend>Multiplayer</legend>
+
+						<label for="username-input">Username</label>
+						<input id="username-input" placeholder="Username" />
+
+						<label for="joining-input">Join</label>
+						<input id="joining-input" placeholder="Joining" />
 					</fieldset>
 				</form>
 			</section>

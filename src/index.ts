@@ -10,6 +10,10 @@ function showScreen(showing: string) {
   }
 }
 
+const isGameActive = () => document.querySelector('#start-game')!.classList.contains('hidden');
+
+const PEER_WAIT_TIME = 5000;
+
 const GAME_OVER = document.querySelector('#game-over')!;
 const QUESTION_TITLE = document.querySelector('#game-play h1')!;
 const QUESTION_INFO = document.querySelector('#question-info')!;
@@ -52,11 +56,13 @@ const PLAYERS: Player[] = [
   },
 ];
 
+peer.on('error', err => alert(err.message));
+
 peer.on('open', id => {
   PLAYERS.find(player => player.self)!.conn.peer = id;
 
   const joining = new URLSearchParams(window.location.hash.slice(1)).get('joining')!;
-  if (!joining) return;
+  if (!joining) return (Settings.formEnabled = true);
 
   console.log('Joining', joining);
   const conn = peer.connect(joining);
@@ -69,16 +75,19 @@ peer.on('open', id => {
   conn.on('open', () => {
     console.log(`Connection to ${joining} opened`);
     PLAYERS.push(player);
+    Settings.formEnabled = true;
   });
   conn.on('close', () => {
     console.log(`Connection to ${joining} closed`);
     PLAYERS.splice(PLAYERS.indexOf(player), 1);
+    Settings.formEnabled = true;
   });
   conn.on('error', console.error);
   conn.on('data', data => handlePeerMessage(conn.peer, data));
 });
 
 peer.on('connection', conn => {
+  Settings.formEnabled = false;
   console.log('Incoming connection', conn.peer);
   let player: Player = {
     displayName: '',
@@ -89,11 +98,20 @@ peer.on('connection', conn => {
   conn.on('open', () => {
     console.log(`Connection to ${conn.peer} opened`);
     PLAYERS.push(player);
+    Settings.formEnabled = true;
+
+    if (isGameActive()) {
+      conn.send({ action: 'message', data: 'Is in active game' });
+      setTimeout(() => conn.close(), PEER_WAIT_TIME);
+      return;
+    }
+
     sendMessage('updateSettings', Settings.data);
   });
   conn.on('close', () => {
     console.log(`Connection to ${conn.peer} closed`);
     PLAYERS.splice(PLAYERS.indexOf(player), 1);
+    Settings.formEnabled = true;
   });
   conn.on('error', console.error);
   conn.on('data', data => handlePeerMessage(conn.peer, data));
@@ -144,11 +162,14 @@ async function advanceGame() {
 }
 
 const Settings = (() => {
+  const form = document.querySelector('#settings-form') as HTMLFormElement;
   const Settings = {
     elements: {
-      form: document.querySelector('#settings-form') as HTMLFormElement,
-      questionTimerInput: document.querySelector('#question-timer-input') as HTMLInputElement,
-      reviewTimerInput: document.querySelector('#review-timer-input') as HTMLInputElement,
+      form,
+      fieldset: form.children[0] as HTMLFieldSetElement,
+      questionTimerInput: form.querySelector('#question-timer-input') as HTMLInputElement,
+      reviewTimerInput: form.querySelector('#review-timer-input') as HTMLInputElement,
+      submitButton: form.querySelector('button')!,
     },
     get data(): SettingsData {
       return {
@@ -160,11 +181,25 @@ const Settings = (() => {
       this.elements.questionTimerInput.value = questionTimer.toString();
       this.elements.reviewTimerInput.value = reviewTimer.toString();
     },
+    get formEnabled() {
+      return !this.elements.fieldset.disabled;
+    },
+    set formEnabled(enabled: boolean) {
+      this.elements.fieldset.disabled = !enabled;
+    },
     handleChange() {
       sendMessage('updateSettings', this.data);
     },
+    handleSubmit(event: SubmitEvent) {
+      event.preventDefault();
+
+      this.elements.submitButton.disabled = true;
+      RESTART_BUTTON.removeAttribute('disabled');
+      sendMessage('ready', 1);
+    },
   };
   Settings.elements.form.addEventListener('change', Settings.handleChange.bind(Settings));
+  Settings.elements.form.addEventListener('submit', Settings.handleSubmit.bind(Settings));
   return Settings;
 })();
 
@@ -230,6 +265,9 @@ async function handlePeerMessage(id: string, { action, data }: any) {
         PLAYERS.forEach(player => delete player.response);
       }
       break;
+    case 'message':
+      alert(`${id} said: ${data}`);
+      break;
     default:
       console.error('Unknown Action', action);
       break;
@@ -250,18 +288,10 @@ function sendMessage(action: string, data: any) {
   for (const player of PLAYERS) player.conn.send({ action, data });
 }
 
-const START_BUTTON = document.querySelector('#start-game button')!;
 const RESTART_BUTTON = document.querySelector('#game-over button')!;
-
-START_BUTTON.addEventListener('click', ({ currentTarget }) => {
-  (currentTarget as HTMLButtonElement).disabled = true;
-  RESTART_BUTTON.removeAttribute('disabled');
-  sendMessage('ready', 1);
-});
-
 RESTART_BUTTON.addEventListener('click', ({ currentTarget }) => {
   (currentTarget as HTMLButtonElement).disabled = true;
-  START_BUTTON.removeAttribute('disabled');
+  Settings.elements.submitButton.disabled = false;
   sendMessage('restart', 1);
 });
 

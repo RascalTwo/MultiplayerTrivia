@@ -13,17 +13,19 @@
 	<body>
 		<main>
 			<section id="start-game">
-				<h1>Options</h1>
 				<form id="settings-form">
-					<fieldset class="two-column-grid">
-						<legend>Timers</legend>
-						<label for="question-timer-input">Question</label>
-						<input type="number" min="0" id="question-timer-input" value="60" placeholder="Time for Questions" />
+					<fieldset disabled>
+						<legend>New Game</legend>
+						<fieldset class="two-column-grid">
+							<legend>Timers</legend>
+							<label for="question-timer-input">Question</label>
+							<input type="number" min="0" id="question-timer-input" value="60" placeholder="Time for Questions" />
 
-						<label for="review-timer-input">Review</label>
-						<input type="number" min="0" id="review-timer-input" value="5" placeholder="Time for Reviews" />
+							<label for="review-timer-input">Review</label>
+							<input type="number" min="0" id="review-timer-input" value="5" placeholder="Time for Reviews" />
+						</fieldset>
+						<button>Ready</button>
 					</fieldset>
-					<button>Ready</button>
 				</form>
 			</section>
 			<form id="game-play" class="hidden">
